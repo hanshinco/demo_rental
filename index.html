@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デモ機貸出管理 ─ 疎通検証（フェーズ0）</title>
+<link rel="stylesheet" href="styles.css">
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>フェーズ0：認証 × CORS 疎通検証</h1>
+  <p class="lead">
+    hanshinco.com のGoogleアカウントでログインし、GAS APIに <code>ping</code> が通るかを確認します。<br>
+    ここが通れば、移行の技術リスク（認証とCORS）はほぼ解消です。
+  </p>
+
+  <div class="step">
+    <div class="stepno">1</div>
+    <div>
+      <div class="steptitle">Googleでログイン</div>
+      <div id="gbtn"></div>
+      <div id="who" class="who">未ログイン</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="stepno">2</div>
+    <div>
+      <div class="steptitle">APIを呼ぶ</div>
+      <button id="pingBtn" class="btn" disabled>api('ping') を呼ぶ</button>
+      <pre id="out" class="out">（ログイン後に実行できます）</pre>
+    </div>
+  </div>
+
+  <p class="note">設定値（クライアントID・GASのURL）は <code>config.js</code> に記入してください。</p>
+</div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
