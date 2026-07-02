@@ -3,49 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>デモ機貸出管理 ─ 疎通検証（フェーズ0）</title>
+<title>デモ機貸出管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-<div class="wrap">
-  <h1>フェーズ0：認証 × CORS 疎通検証</h1>
-  <p class="lead">
-    hanshinco.com のGoogleアカウントでログインし、GAS APIに <code>ping</code> が通るかを確認します。<br>
-    ここが通れば、移行の技術リスク（認証とCORS）はほぼ解消です。
-  </p>
 
-  <div class="step">
-    <div class="stepno">1</div>
-    <div>
-      <div class="steptitle">Googleでログイン</div>
-      <div id="gbtn"></div>
-      <div id="who" class="who">未ログイン</div>
-    </div>
+<!-- ログインゲート（hanshinco.com のGoogleログイン） -->
+<div id="login">
+  <div class="login-card">
+    <div class="brand" style="justify-content:center;font-size:18px"><span class="mk">🛠</span>デモ機貸出管理</div>
+    <p class="login-note">hanshinco.com のGoogleアカウントでログインしてください。</p>
+    <div id="gbtn" style="display:flex;justify-content:center"></div>
+    <div id="login-msg" class="login-msg"></div>
   </div>
-
-  <div class="step">
-    <div class="stepno">2</div>
-    <div>
-      <div class="steptitle">疎通確認（ping）</div>
-      <button id="pingBtn" class="btn" disabled>api('ping') を呼ぶ</button>
-      <pre id="out" class="out">（ログイン後に実行できます）</pre>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="stepno">3</div>
-    <div>
-      <div class="steptitle">DB読み取り確認（getBootstrap）</div>
-      <button id="bootBtn" class="btn" disabled>api('getBootstrap') を呼ぶ</button>
-      <pre id="bootOut" class="out">（ログイン後に実行できます）</pre>
-    </div>
-  </div>
-
-  <p class="note">設定値（クライアントID・GASのURL）は <code>config.js</code> に記入してください。</p>
 </div>
+
+<!-- アプリ本体（ログイン後に表示） -->
+<div id="app" style="display:none">
+<header class="top">
+  <span class="brand"><span class="mk">🛠</span>デモ機管理</span><span class="spacer"></span>
+  <span class="who-h" id="whoH"></span>
+  <button class="primary" id="btnNew" onclick="openNew()">＋ 新規貸出</button>
+</header>
+<div class="layout"><aside class="left"><nav class="menu" id="menu"></nav><div class="subpane" id="subpane" style="display:none"></div></aside><main class="right" id="main"></main></div>
+</div>
+
+<div class="loading" id="loading" style="display:none">読み込み中…</div>
+<div id="busy"><div class="bx"><div class="spin"></div>処理中…</div></div>
+<div id="tip"></div>
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<aside class="panel" id="panel"><div class="ph"><h3 id="panelTitle">詳細</h3><button class="x" onclick="closePanel()">✕</button></div><div class="pb" id="panelBody"></div><div class="pactions" id="panelActions"></div></aside>
+<div class="modal" id="newModal"><div class="mwrap" style="width:900px"><button class="modalx" onclick="cls('newModal')" title="閉じる">✕</button><div class="mcard" id="newCard" style="width:100%"></div></div></div>
+<div class="modal" id="discardModal"><div class="mcard" id="discardCard" style="width:480px"></div></div>
+<div class="modal" id="extModal"><div class="mcard" id="extCard" style="width:480px"></div></div>
+<div class="modal" id="caseModal"><div class="mcard" id="caseCard"></div></div>
+<div class="modal" id="empyoModal"><div class="mwrap" style="width:720px"><div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0">伝票プレビュー</h3><div><button class="btn" onclick="cls('empyoModal')">閉じる</button> <button class="btn primary" onclick="printEmpyo()">🖨 印刷 / PDF</button></div></div><div class="noprint" style="margin-bottom:10px"><input id="empyoExtra" placeholder="帳票に追記（例：マウント・カタログ同梱）" oninput="empyoExtra=this.value;renderEmpyo()" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit"></div><div id="empyoArea"></div></div></div>
+<div id="printRoot"></div>
+
 <script src="config.js"></script>
-<script src="app.js"></script>
+<script src="app-core.js"></script>
+<script src="auth.js"></script>
 </body>
 </html>
