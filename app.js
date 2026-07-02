@@ -34,6 +34,7 @@ function onCredential(resp) {
   who.textContent = '✅ ログイン: ' + claims.email;
   who.className = 'who ok';
   document.getElementById('pingBtn').disabled = false;
+  document.getElementById('bootBtn').disabled = false;
 }
 
 // GAS API 呼び出しラッパー（Content-Type: text/plain でCORSプリフライトを回避）
@@ -63,6 +64,28 @@ async function doPing() {
   }
 }
 
+// getBootstrapボタン（DB読み取りの疎通確認：件数と自分の役割を表示）
+async function doBootstrap() {
+  const out = document.getElementById('bootOut');
+  out.textContent = '呼び出し中…';
+  out.className = 'out';
+  try {
+    const d = await api('getBootstrap', {});
+    const summary = {
+      商品: (d.products || []).length,
+      個体: (d.units || []).length,
+      予約: (d.reservations || []).length,
+      ユーザー: (d.usersData || []).length,
+      あなた: d.me
+    };
+    out.textContent = '✅ DB読み取りOK\n\n' + JSON.stringify(summary, null, 2);
+    out.className = 'out ok';
+  } catch (e) {
+    out.textContent = '❌ 失敗: ' + e.message;
+    out.className = 'out ng';
+  }
+}
+
 // 初期化
 window.addEventListener('load', function () {
   if (!window.google || !google.accounts || !google.accounts.id) {
@@ -77,4 +100,5 @@ window.addEventListener('load', function () {
   google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'outline', size: 'large' });
   google.accounts.id.prompt();  // ワンタップ表示（任意）
   document.getElementById('pingBtn').addEventListener('click', doPing);
+  document.getElementById('bootBtn').addEventListener('click', doBootstrap);
 });
