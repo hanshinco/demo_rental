@@ -110,8 +110,7 @@ function onCredential(resp) {
   if (claims.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) {
     try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
     var msg = document.getElementById('login-msg');
-    msg.textContent = '⛔ ' + window.APP_CONFIG.ALLOWED_DOMAIN +
-      ' のアカウントでログインしてください（あなた: ' + (claims.hd || claims.email) + '）';
+    msg.textContent = '⛔ 許可された組織のGoogleアカウントでログインしてください（あなた: ' + (claims.hd || claims.email) + '）';
     msg.className = 'login-msg ng';
     return;
   }
