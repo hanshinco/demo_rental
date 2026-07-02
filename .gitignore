@@ -20,6 +20,9 @@ client_secret*.json
 /backup/
 /export/
 
+# === 内部資料（公開リポジトリに出さない・ローカル管理）===
+/docs/
+
 # === OS / エディタ ===
 .DS_Store
 Thumbs.db
