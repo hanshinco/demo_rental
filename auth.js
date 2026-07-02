@@ -63,17 +63,37 @@ function installGasShim() {
   window.google.script = { run: makeRunner(null, null) };
 }
 
-// ログイン成功時
+let booted = false;
+let refreshTimer = null;
+
+// IDトークンの exp(UNIX秒) の少し前に自動で再サインインし、トークンを更新する。
+// これでアプリを開いたまま約1時間経っても失効せず、操作が突然エラーになるのを防ぐ。
+function scheduleRefresh(exp) {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  if (!exp) return;
+  var ms = exp * 1000 - Date.now() - 5 * 60 * 1000;   // 失効の5分前に更新
+  if (ms < 1000) ms = 1000;
+  if (ms > 0x7fffffff) ms = 0x7fffffff;               // setTimeout の上限にクランプ
+  refreshTimer = setTimeout(function () {
+    // auto_select により無操作でコールバック（onCredential）が再発火し idToken が差し替わる
+    if (window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
+  }, ms);
+}
+
+// ログイン成功時（初回ログイン／自動サインイン／期限前の自動更新で共通に発火）
 function onCredential(resp) {
   idToken = resp.credential;
   var claims = decodeJwt(idToken);
-  var msg = document.getElementById('login-msg');
   if (claims.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) {
+    var msg = document.getElementById('login-msg');
     msg.textContent = '⛔ ' + window.APP_CONFIG.ALLOWED_DOMAIN +
       ' のアカウントでログインしてください（あなた: ' + (claims.hd || claims.email) + '）';
     msg.className = 'login-msg ng';
     return;
   }
+  scheduleRefresh(claims.exp);
+  if (booted) return;   // 2回目以降（自動更新）はトークンを差し替えるだけ。UI再描画・データ再取得はしない
+  booted = true;
   installGasShim();
   document.getElementById('login').style.display = 'none';
   document.getElementById('loading').style.display = '';
@@ -84,10 +104,12 @@ function onCredential(resp) {
 function initAuth() {
   google.accounts.id.initialize({
     client_id: window.APP_CONFIG.CLIENT_ID,
-    callback: onCredential
+    callback: onCredential,
+    auto_select: true,             // リロード時に無操作で自動サインイン（同一セッションなら再ログイン不要）
+    use_fedcm_for_prompt: true      // Chromeのサードパーティ Cookie 廃止に追随（FedCMでOne Tapを表示）
   });
   google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'outline', size: 'large', width: 260 });
-  google.accounts.id.prompt();
+  google.accounts.id.prompt();      // 自動選択可能なら即コールバック、無理なら手動ログインを促す
 }
 
 function waitForGis(tries) {
