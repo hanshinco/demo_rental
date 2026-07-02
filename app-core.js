@@ -59,22 +59,25 @@ function chips(a){let h='';if(a.over)h+=`<span class="chip red">🟥 超過 ${a.
 const MENU=[{k:'dashboard',ic:'🏠',t:'ダッシュボード'},{k:'search',ic:'🔍',t:'商品検索'},{k:'cases',ic:'📑',t:'案件一覧',sub:[{k:'shipwait',t:'出荷待ち一覧'},{k:'active',t:'貸出中一覧'},{k:'reserve',t:'予約一覧'},{k:'completed',t:'完了案件'}]},{k:'unitReg',ic:'🏷',t:'商品登録',info:'サンプルを追加するときや新商品を登録するときに使用',need:'field'},{k:'users',ic:'👥',t:'ユーザー登録',need:'office'},{k:'settings',ic:'⚙',t:'設定・通知',need:'office'}];
 const CASEKEYS=['shipwait','active','reserve','completed'];   // 「案件一覧」配下のサブ画面
 let section='dashboard',selected='',view='gantt',zoomPx=26,listFilter='active',casesOpen=false;const expanded=new Set();
-/* ===== ルーティング（ハッシュ #/… 。戻る/進む/ブックマーク/共有に対応） ===== */
+/* ===== ルーティング（History API パス型 /… 。戻る/進む/ブックマーク/共有・リロードOK） ===== */
 const SECTIONS=['dashboard','search','shipwait','active','reserve','completed','unitReg','users','settings'];
+const BASE=window.__BASE||'/';   // GitHub Pagesのサブパス(/demo_rental/)かローカル(/)を吸収
 let _route={section:null,selected:null,listFilter:null},_detail=null;
-function buildHash(){let p;
-  if(section==='search')p=selected?'/search/'+encodeURIComponent(selected):'/search';
-  else if(section==='active')p=(listFilter&&listFilter!=='active')?'/active/'+encodeURIComponent(listFilter):'/active';
-  else p='/'+section;
-  return '#'+p;}
-function parseRoute(hash){const raw=(hash||'').replace(/^#\/?/,''),parts=raw.split('?'),segs=parts[0].split('/').filter(Boolean);
-  const sec=SECTIONS.indexOf(segs[0])>=0?segs[0]:'dashboard';
+function pathSeg(){   // 現在の状態→URLのパス（BASE配下・クエリなし）
+  let seg;
+  if(section==='search')seg=selected?'search/'+encodeURIComponent(selected):'search';
+  else if(section==='active')seg=(listFilter&&listFilter!=='active')?'active/'+encodeURIComponent(listFilter):'active';
+  else seg=(section==='dashboard')?'':section;
+  return BASE+seg;}
+function parseRoute(){let path=location.pathname;if(path.indexOf(BASE)===0)path=path.slice(BASE.length);
+  const segs=path.split('/').filter(Boolean),sec=SECTIONS.indexOf(segs[0])>=0?segs[0]:'dashboard';
   const r={section:sec,selected:'',listFilter:'active',detail:null};
   if(sec==='search'&&segs[1])r.selected=decodeURIComponent(segs[1]);
   if(sec==='active'&&segs[1])r.listFilter=decodeURIComponent(segs[1]);
-  if(parts[1]){const q=new URLSearchParams(parts[1]),k=q.get('panel'),id=q.get('id');if(k&&id)r.detail={kind:k,id:id};}
+  const q=new URLSearchParams(location.search),k=q.get('panel'),id=q.get('id');if(k&&id)r.detail={kind:k,id:id};
   return r;}
-function applyRoute(force){const n=parseRoute(location.hash);
+function navigate(url){if(url===location.pathname+location.search)return;history.pushState(null,'',url);applyRoute(false);}
+function applyRoute(force){const n=parseRoute();
   const secCh=force||n.section!==_route.section,selCh=force||n.selected!==_route.selected,filCh=force||n.listFilter!==_route.listFilter;
   section=n.section;selected=n.selected;listFilter=n.listFilter;
   if(CASEKEYS.indexOf(section)>=0)casesOpen=true;
@@ -83,14 +86,13 @@ function applyRoute(force){const n=parseRoute(location.hash);
   else if(section==='active'&&filCh){renderMenu();renderActive();}
   _route={section,selected,listFilter};
   syncDetail(n.detail,force);}
-function router(){applyRoute(false);}
-window.addEventListener('hashchange',router);
+window.addEventListener('popstate',function(){applyRoute(false);});   // 戻る/進む
 function go(s){
-  if(s==='cases'){casesOpen=!casesOpen;if(casesOpen&&CASEKEYS.indexOf(section)<0)location.hash='#/shipwait';else renderLeft();return;}
-  if(s==='search'){location.hash=selected?'#/search/'+encodeURIComponent(selected):'#/search';return;}
-  if(s==='active'){location.hash='#/active';return;}
-  location.hash='#/'+s;}
-function goList(f){location.hash=(f==='active')?'#/active':'#/active/'+encodeURIComponent(f);}
+  if(s==='cases'){casesOpen=!casesOpen;if(casesOpen&&CASEKEYS.indexOf(section)<0)navigate(BASE+'shipwait');else renderLeft();return;}
+  if(s==='search'){navigate(BASE+(selected?'search/'+encodeURIComponent(selected):'search'));return;}
+  if(s==='active'){navigate(BASE+'active');return;}
+  navigate(BASE+(s==='dashboard'?'':s));}
+function goList(f){navigate(BASE+(f==='active'?'active':'active/'+encodeURIComponent(f)));}
 function render(){renderLeft();({dashboard:renderDashboard,search:renderProduct,shipwait:renderShipWait,active:renderActive,reserve:renderReserve,completed:renderCompleted,unitReg:renderUnitReg,users:renderUsers,settings:renderSettings}[section])();}
 /* パネル（レコード詳細）もURL化：戻るで閉じる・URL共有で直接開ける */
 function syncDetail(d,force){
@@ -98,11 +100,11 @@ function syncDetail(d,force){
   if(!force&&_detail&&_detail.kind===d.kind&&_detail.id===d.id)return;
   _detail=d;
   try{if(d.kind==='loan')openPanelView(d.id);else if(d.kind==='unit')openUnitPanelView(d.id);else if(d.kind==='resv')openResvPanelView(d.id);else throw 0;}
-  catch(e){_detail=null;hidePanel();const h=location.hash,i=h.indexOf('?');if(i>=0)history.replaceState(null,'',h.slice(0,i)||'#/dashboard');}}
-function openDetailHash(kind,id){location.hash=buildHash()+'?panel='+kind+'&id='+encodeURIComponent(id);}
-function openPanel(uid){openDetailHash('loan',uid);}
-function openUnitPanel(uid){openDetailHash('unit',uid);}
-function openResvPanel(rid){openDetailHash('resv',rid);}
+  catch(e){_detail=null;hidePanel();if(location.search)history.replaceState(null,'',pathSeg());}}
+function openDetail(kind,id){navigate(pathSeg()+'?panel='+kind+'&id='+encodeURIComponent(id));}
+function openPanel(uid){openDetail('loan',uid);}
+function openUnitPanel(uid){openDetail('unit',uid);}
+function openResvPanel(rid){openDetail('resv',rid);}
 function renderLeft(){const aside=document.querySelector('.left');
   if(section==='search'){aside.innerHTML=`<div class="backbar"><button class="circ" onclick="go('dashboard')">←</button><span class="bt">商品検索</span></div><div class="subpane" id="subpane" style="display:flex"></div>`;renderSubTree();}
   else{aside.innerHTML=`<nav class="menu" id="menu"></nav>`;renderMenu();}}
@@ -118,7 +120,7 @@ function buildTree(f){const mk={};products.forEach(p=>{if(f){const hit=(p.name+p
     Object.keys(mk[m]).forEach(cat=>{const cK='c:'+m+'>'+cat,cEl=node('cat',cat,cK,!!f||expanded.has(cK));
       mk[m][cat].forEach(p=>{const k=kpi(p.code),pEl=document.createElement('div');pEl.className='node prod'+(p.code===selected?' sel':'');
         pEl.innerHTML=`<div class="row"><span class="caret"></span><span class="name">${esc(p.name)}</span><span class="badge tnum ${k.avail===0?'zero':''}">${k.avail}/${k.total}</span></div>`;
-        pEl.querySelector('.row').onclick=()=>{location.hash='#/search/'+encodeURIComponent(p.code);};cEl._k.appendChild(pEl);});
+        pEl.querySelector('.row').onclick=()=>{navigate(BASE+'search/'+encodeURIComponent(p.code));};cEl._k.appendChild(pEl);});
       mEl._k.appendChild(cEl);});tree.appendChild(mEl);});}
 function node(cls,label,key,open){const el=document.createElement('div');el.className='node '+cls;el.innerHTML=`<div class="row"><span class="caret">${open?'▾':'▸'}</span><span class="name">${esc(label)}</span></div>`;const k=document.createElement('div');if(!open)k.className='hide';el.appendChild(k);el._k=k;
   el.querySelector('.row').onclick=()=>{if(expanded.has(key))expanded.delete(key);else expanded.add(key);k.classList.toggle('hide');el.querySelector('.caret').textContent=k.classList.contains('hide')?'▸':'▾';};return el;}
@@ -347,7 +349,7 @@ function openResvPanelView(rid){const r=reservations.find(x=>x.id===rid);if(!r)t
   document.getElementById('panelActions').innerHTML=`<button class="danger" onclick="doCancelResv('${r.id}')">予約キャンセル</button>`;showPanel();}
 function showPanel(){document.getElementById('overlay').classList.add('show');document.getElementById('panel').classList.add('show');}
 function hidePanel(){document.getElementById('overlay').classList.remove('show');document.getElementById('panel').classList.remove('show');}
-function closePanel(){hidePanel();_detail=null;const h=location.hash,i=h.indexOf('?');if(i>=0)history.replaceState(null,'',h.slice(0,i)||'#/dashboard');}   // パネルを閉じてURLからも除去（履歴は汚さない）
+function closePanel(){hidePanel();_detail=null;if(location.search)history.replaceState(null,'',pathSeg());}   // パネルを閉じてURLから?panelを除去（履歴は汚さない）
 
 /* ===== 書き込みアクション ===== */
 function confirmReturn(){const v=document.getElementById('retSel').value;if(!v){alert('返却処理を選択してください');return;}const u=units.find(x=>x.id===curUnit);
