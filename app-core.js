@@ -28,7 +28,7 @@ function applyData(d){
   document.getElementById('loading').style.display='none';document.getElementById('app').style.display='';
   document.getElementById('whoH').innerHTML='👤 <b>'+esc(ME.name)+'</b>（'+esc(ME.role)+'）';
   const bn=document.getElementById('btnNew');if(bn)bn.style.display=canOffice()?'':'none';   // 受付は事務所のみ
-  render();
+  applyRoute(true);   // 現在のURL(ハッシュ)に従って描画。deep link/リロードでも同じ画面に復元
   busyOff();   // 再読込→再描画が完全に終わってからクルクルを消す
 }
 function reload(){google.script.run.withSuccessHandler(applyData).getBootstrap();}
@@ -59,10 +59,50 @@ function chips(a){let h='';if(a.over)h+=`<span class="chip red">🟥 超過 ${a.
 const MENU=[{k:'dashboard',ic:'🏠',t:'ダッシュボード'},{k:'search',ic:'🔍',t:'商品検索'},{k:'cases',ic:'📑',t:'案件一覧',sub:[{k:'shipwait',t:'出荷待ち一覧'},{k:'active',t:'貸出中一覧'},{k:'reserve',t:'予約一覧'},{k:'completed',t:'完了案件'}]},{k:'unitReg',ic:'🏷',t:'商品登録',info:'サンプルを追加するときや新商品を登録するときに使用',need:'field'},{k:'users',ic:'👥',t:'ユーザー登録',need:'office'},{k:'settings',ic:'⚙',t:'設定・通知',need:'office'}];
 const CASEKEYS=['shipwait','active','reserve','completed'];   // 「案件一覧」配下のサブ画面
 let section='dashboard',selected='',view='gantt',zoomPx=26,listFilter='active',casesOpen=false;const expanded=new Set();
-function go(s){if(s==='cases'){casesOpen=!casesOpen;if(casesOpen&&CASEKEYS.indexOf(section)<0)section='shipwait';render();return;}
-  if(s==='active')listFilter='active';if(CASEKEYS.indexOf(s)>=0)casesOpen=true;section=s;render();}
-function goList(f){listFilter=f;section='active';casesOpen=true;render();}
+/* ===== ルーティング（ハッシュ #/… 。戻る/進む/ブックマーク/共有に対応） ===== */
+const SECTIONS=['dashboard','search','shipwait','active','reserve','completed','unitReg','users','settings'];
+let _route={section:null,selected:null,listFilter:null},_detail=null;
+function buildHash(){let p;
+  if(section==='search')p=selected?'/search/'+encodeURIComponent(selected):'/search';
+  else if(section==='active')p=(listFilter&&listFilter!=='active')?'/active/'+encodeURIComponent(listFilter):'/active';
+  else p='/'+section;
+  return '#'+p;}
+function parseRoute(hash){const raw=(hash||'').replace(/^#\/?/,''),parts=raw.split('?'),segs=parts[0].split('/').filter(Boolean);
+  const sec=SECTIONS.indexOf(segs[0])>=0?segs[0]:'dashboard';
+  const r={section:sec,selected:'',listFilter:'active',detail:null};
+  if(sec==='search'&&segs[1])r.selected=decodeURIComponent(segs[1]);
+  if(sec==='active'&&segs[1])r.listFilter=decodeURIComponent(segs[1]);
+  if(parts[1]){const q=new URLSearchParams(parts[1]),k=q.get('panel'),id=q.get('id');if(k&&id)r.detail={kind:k,id:id};}
+  return r;}
+function applyRoute(force){const n=parseRoute(location.hash);
+  const secCh=force||n.section!==_route.section,selCh=force||n.selected!==_route.selected,filCh=force||n.listFilter!==_route.listFilter;
+  section=n.section;selected=n.selected;listFilter=n.listFilter;
+  if(CASEKEYS.indexOf(section)>=0)casesOpen=true;
+  if(secCh)render();
+  else if(section==='search'&&selCh){const inp=document.getElementById('search');buildTree(inp?inp.value.trim().toLowerCase():'');renderProduct();}
+  else if(section==='active'&&filCh){renderMenu();renderActive();}
+  _route={section,selected,listFilter};
+  syncDetail(n.detail,force);}
+function router(){applyRoute(false);}
+window.addEventListener('hashchange',router);
+function go(s){
+  if(s==='cases'){casesOpen=!casesOpen;if(casesOpen&&CASEKEYS.indexOf(section)<0)location.hash='#/shipwait';else renderLeft();return;}
+  if(s==='search'){location.hash=selected?'#/search/'+encodeURIComponent(selected):'#/search';return;}
+  if(s==='active'){location.hash='#/active';return;}
+  location.hash='#/'+s;}
+function goList(f){location.hash=(f==='active')?'#/active':'#/active/'+encodeURIComponent(f);}
 function render(){renderLeft();({dashboard:renderDashboard,search:renderProduct,shipwait:renderShipWait,active:renderActive,reserve:renderReserve,completed:renderCompleted,unitReg:renderUnitReg,users:renderUsers,settings:renderSettings}[section])();}
+/* パネル（レコード詳細）もURL化：戻るで閉じる・URL共有で直接開ける */
+function syncDetail(d,force){
+  if(!d){if(_detail){_detail=null;hidePanel();}return;}
+  if(!force&&_detail&&_detail.kind===d.kind&&_detail.id===d.id)return;
+  _detail=d;
+  try{if(d.kind==='loan')openPanelView(d.id);else if(d.kind==='unit')openUnitPanelView(d.id);else if(d.kind==='resv')openResvPanelView(d.id);else throw 0;}
+  catch(e){_detail=null;hidePanel();const h=location.hash,i=h.indexOf('?');if(i>=0)history.replaceState(null,'',h.slice(0,i)||'#/dashboard');}}
+function openDetailHash(kind,id){location.hash=buildHash()+'?panel='+kind+'&id='+encodeURIComponent(id);}
+function openPanel(uid){openDetailHash('loan',uid);}
+function openUnitPanel(uid){openDetailHash('unit',uid);}
+function openResvPanel(rid){openDetailHash('resv',rid);}
 function renderLeft(){const aside=document.querySelector('.left');
   if(section==='search'){aside.innerHTML=`<div class="backbar"><button class="circ" onclick="go('dashboard')">←</button><span class="bt">商品検索</span></div><div class="subpane" id="subpane" style="display:flex"></div>`;renderSubTree();}
   else{aside.innerHTML=`<nav class="menu" id="menu"></nav>`;renderMenu();}}
@@ -78,7 +118,7 @@ function buildTree(f){const mk={};products.forEach(p=>{if(f){const hit=(p.name+p
     Object.keys(mk[m]).forEach(cat=>{const cK='c:'+m+'>'+cat,cEl=node('cat',cat,cK,!!f||expanded.has(cK));
       mk[m][cat].forEach(p=>{const k=kpi(p.code),pEl=document.createElement('div');pEl.className='node prod'+(p.code===selected?' sel':'');
         pEl.innerHTML=`<div class="row"><span class="caret"></span><span class="name">${esc(p.name)}</span><span class="badge tnum ${k.avail===0?'zero':''}">${k.avail}/${k.total}</span></div>`;
-        pEl.querySelector('.row').onclick=()=>{selected=p.code;buildTree(f);renderProduct();};cEl._k.appendChild(pEl);});
+        pEl.querySelector('.row').onclick=()=>{location.hash='#/search/'+encodeURIComponent(p.code);};cEl._k.appendChild(pEl);});
       mEl._k.appendChild(cEl);});tree.appendChild(mEl);});}
 function node(cls,label,key,open){const el=document.createElement('div');el.className='node '+cls;el.innerHTML=`<div class="row"><span class="caret">${open?'▾':'▸'}</span><span class="name">${esc(label)}</span></div>`;const k=document.createElement('div');if(!open)k.className='hide';el.appendChild(k);el._k=k;
   el.querySelector('.row').onclick=()=>{if(expanded.has(key))expanded.delete(key);else expanded.add(key);k.classList.toggle('hide');el.querySelector('.caret').textContent=k.classList.contains('hide')?'▸':'▾';};return el;}
@@ -268,7 +308,7 @@ function testAlert(){if(!confirm('現時点で対象となる案件があれば�
 /* ===== tooltip / パネル ===== */
 function bindTips(){document.querySelectorAll('.bar[data-tip],.ni[data-tip]').forEach(b=>{b.addEventListener('mouseenter',()=>{const t=document.getElementById('tip');if(b.classList.contains('ni'))t.textContent=b.dataset.tip;else t.innerHTML=b.dataset.tip;t.style.display='block';});b.addEventListener('mousemove',e=>{const t=document.getElementById('tip');t.style.left=Math.min(e.clientX+14,innerWidth-310)+'px';t.style.top=(e.clientY+16)+'px';});b.addEventListener('mouseleave',()=>document.getElementById('tip').style.display='none');});}
 let curUnit='';
-function openPanel(uid){const u=units.find(x=>x.id===uid),l=u.loan,s=statusOf(u),p=prodOf(u.prod),hold=isHoldS(s.key),wait=s.key==='出荷待ち';curUnit=uid;
+function openPanelView(uid){const u=units.find(x=>x.id===uid);if(!u||!u.loan)throw new Error('stale');const l=u.loan,s=statusOf(u),p=prodOf(u.prod),hold=isHoldS(s.key),wait=s.key==='出荷待ち';curUnit=uid;
   const due=l.dueType==='日付指定'?fmtY(l.due)+'（日付指定）':l.dueType;
   document.getElementById('panelTitle').textContent=`#${u.sn} ${typeText(u)}　${p.name}`;
   document.getElementById('panelBody').innerHTML=`<div class="field"><div class="l">状態</div><div class="v"><span class="st"><span class="dot ${s.dot}"></span>${s.key}${s.alert?'（'+s.alert+'）':''}</span></div></div>
@@ -291,7 +331,7 @@ function openPanel(uid){const u=units.find(x=>x.id===uid),l=u.loan,s=statusOf(u)
   document.getElementById('panelActions').innerHTML+='<button onclick="closePanel()">閉じる</button>';
   showPanel();}
 // 個体情報パネル（ガントのラベルクリック）。参照＋備考編集（事務所のみ）。
-function openUnitPanel(uid){const u=units.find(x=>x.id===uid);if(!u)return;const s=statusOf(u),p=prodOf(u.prod),l=u.loan,onLoan=l&&!l.returned;
+function openUnitPanelView(uid){const u=units.find(x=>x.id===uid);if(!u)throw new Error('stale');const s=statusOf(u),p=prodOf(u.prod),l=u.loan,onLoan=l&&!l.returned;
   document.getElementById('panelTitle').textContent=`#${u.sn}　${p.name}`;
   document.getElementById('panelBody').innerHTML=`<div class="field"><div class="l">状態</div><div class="v"><span class="st"><span class="dot ${s.dot}"></span>${s.key}${s.sub?'（'+s.sub+'）':''}</span></div></div>
     ${onLoan?`<div class="field"><div class="l">貸出先</div><div class="v">${esc(recip(l))}</div></div><div class="field"><div class="l">依頼担当</div><div class="v">${esc(l.reqStaff||'－')}</div></div>`:''}
@@ -301,12 +341,13 @@ function openUnitPanel(uid){const u=units.find(x=>x.id===uid);if(!u)return;const
     <div class="field"><div class="l">備考</div><div class="v">${esc(u.note||'－')}</div></div>`;
   document.getElementById('panelActions').innerHTML=`${canOffice()?`<button class="primary" onclick="editUnitNote('${u.id}')">備考を編集</button>`:''}<button onclick="closePanel()">閉じる</button>`;
   showPanel();}
-function openResvPanel(rid){const r=reservations.find(x=>x.id===rid),u=units.find(x=>x.id===r.unit)||{sn:r.unit,prod:''},p=prodOf(u.prod);
+function openResvPanelView(rid){const r=reservations.find(x=>x.id===rid);if(!r)throw new Error('stale');const u=units.find(x=>x.id===r.unit)||{sn:r.unit,prod:''},p=prodOf(u.prod);
   document.getElementById('panelTitle').textContent=`🗓 予約　#${u.sn}`;
   document.getElementById('panelBody').innerHTML=`<div class="field"><div class="l">商品</div><div class="v">${esc(p.name)}</div></div><div class="field"><div class="l">予約先 / 用途</div><div class="v">${esc(r.customer)}</div></div><div class="row2"><div class="field"><div class="l">出荷予定日</div><div class="v">${fmt(r.start)}</div></div><div class="field"><div class="l">返却着荷予定日</div><div class="v">${fmt(r.end)}</div></div></div><div class="field"><div class="l">受付担当</div><div class="v">${esc(r.staff)}</div></div>`;
   document.getElementById('panelActions').innerHTML=`<button class="danger" onclick="doCancelResv('${r.id}')">予約キャンセル</button>`;showPanel();}
 function showPanel(){document.getElementById('overlay').classList.add('show');document.getElementById('panel').classList.add('show');}
-function closePanel(){document.getElementById('overlay').classList.remove('show');document.getElementById('panel').classList.remove('show');}
+function hidePanel(){document.getElementById('overlay').classList.remove('show');document.getElementById('panel').classList.remove('show');}
+function closePanel(){hidePanel();_detail=null;const h=location.hash,i=h.indexOf('?');if(i>=0)history.replaceState(null,'',h.slice(0,i)||'#/dashboard');}   // パネルを閉じてURLからも除去（履歴は汚さない）
 
 /* ===== 書き込みアクション ===== */
 function confirmReturn(){const v=document.getElementById('retSel').value;if(!v){alert('返却処理を選択してください');return;}const u=units.find(x=>x.id===curUnit);
