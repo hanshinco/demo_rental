@@ -1,6 +1,5 @@
 /* ===== データ（バックエンドから） ===== */
 let products=[],units=[],makerCat={},reservations=[],usersData=[],ME={name:'',role:''};
-const ADMIN_MAIL='y.watanabe@hanshinco.com';   // 設定画面の表示用（実判定はサーバ側 resolveStaffEmails_）
 // ⚠ canOffice/canField は「画面のボタンを出すか」だけを決める“見た目”の制御。
 //    防御ではない（コンソールから google.script.run.<関数>() を直接呼べば迂回できる）。
 //    実際の権限判定はサーバ側 Code.gs の requireRole_ が行う＝唯一の防御線。
@@ -284,12 +283,12 @@ function urRenderList(code){const el=document.getElementById('urList');if(!el)re
 
 function renderUsers(){document.getElementById('main').innerHTML=`<div class="sechead"><h2>ユーザー登録</h2><span class="meta">Googleアカウント↔漢字氏名・役割</span></div>
   <table class="list"><thead><tr><th>メール</th><th>氏名(漢字)</th><th>役割</th><th>有効</th></tr></thead><tbody>${usersData.map(u=>`<tr><td>${u.mail||'<span style="color:#cbd5e1">（未登録）</span>'}</td><td>${esc(u.name)}</td><td><span class="rolebadge r-${u.role}">${esc(u.role)}</span></td><td>${u.on?'✓':'－'}</td></tr>`).join('')}</tbody></table>
-  <div class="card" style="margin-top:18px"><h4 style="margin:0 0 10px">＋ 新規ユーザー</h4><div class="formgrid"><div><label>メール</label><input id="uMail" placeholder="x.yamada@hanshinco.com"></div><div><label>役割</label><select id="uRole"><option>事務所</option><option>倉庫</option><option>閲覧</option></select></div><div><label>姓（漢字）</label><input id="uLast" placeholder="山田"></div><div><label>名（漢字）</label><input id="uFirst" placeholder="太郎"></div></div><div class="mbtns"><button class="btn primary" onclick="submitUser()">追加</button></div></div>`;}
+  <div class="card" style="margin-top:18px"><h4 style="margin:0 0 10px">＋ 新規ユーザー</h4><div class="formgrid"><div><label>メール</label><input id="uMail" placeholder="x.yamada@example.com"></div><div><label>役割</label><select id="uRole"><option>事務所</option><option>倉庫</option><option>閲覧</option></select></div><div><label>姓（漢字）</label><input id="uLast" placeholder="山田"></div><div><label>名（漢字）</label><input id="uFirst" placeholder="太郎"></div></div><div class="mbtns"><button class="btn primary" onclick="submitUser()">追加</button></div></div>`;}
 
 function renderSettings(){document.getElementById('main').innerHTML=`<div class="sechead"><h2>設定・通知</h2><span class="meta">超過アラートメール</span></div>
   <div class="card" style="margin-top:16px"><div id="alertStatus" class="note">状態を確認中…</div>
    <div class="formgrid" style="max-width:640px;margin-top:10px"><div class="full"><label>動作内容</label><div class="v" style="font-size:13px;line-height:1.8">毎日1回 T_貸出 を確認し、<b>終了予定日（日付指定）から5日経過</b>しても貸出中（返却処理されていない）案件があれば、<b>受付担当・出荷担当</b>へメール送信します。さらに<b>15日経過</b>で再送し、その後は送りません。返却されずに同じ案件IDが続く間だけが対象です（返却→別の場所へ貸出は別案件になり対象外）。</div></div>
-   <div class="full"><label>宛先の解決</label><div class="v" style="font-size:13px">受付担当・出荷担当の氏名から M_ユーザー のメールを引きます。未登録の担当がいる場合は管理者（${esc(ADMIN_MAIL)}）へフォールバックします。</div></div></div>
+   <div class="full"><label>宛先の解決</label><div class="v" style="font-size:13px">受付担当・出荷担当の氏名から M_ユーザー のメールを引きます。未登録の担当がいる場合は管理者へフォールバックします。</div></div></div>
    <div class="mbtns" style="justify-content:flex-start"><button class="btn primary" onclick="enableAlert()">アラートを有効化（日次トリガー設置）</button><button class="btn" onclick="disableAlert()">無効化</button><button class="btn" onclick="testAlert()">今すぐ判定して送信（テスト）</button></div>
    <p class="note">「有効化」を押すと毎朝の自動チェック（GAS時限トリガー）が設置されます。初回はGoogleの権限承認が必要です。「テスト」は現時点で対象がある場合に実際のメールを送信します。</p></div>
   <div class="sechead" style="margin-top:24px"><h2>Googleチャット通知</h2><span class="meta">新規受付の登録時</span></div>
