@@ -8,7 +8,7 @@ window.APP_CONFIG = {
   // Google Cloud Console で発行した OAuth クライアントID
   CLIENT_ID: '1061860031109-005vd0tcpi6l515d0c97npmg29saju86.apps.googleusercontent.com',
   // GAS ウェブアプリのデプロイURL（末尾が /exec のもの）
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw_qZtXx2RlcAx-I3t9LVMVWulAns5Ekf-OsHjCaE3Mzftj2qgFvrzYN448nCeBNKeLhQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyXEvchcq_eEqnM8VBceZTG2oiQSxzmwLfi-ZJ2IJKJr6UZ7KgNuFul4xBj0HRLBqgpZg/exec',
   // 許可する組織ドメイン（クライアント側の事前チェック用。本当の検証はGAS側）
   ALLOWED_DOMAIN: 'hanshinco.com'
 };
