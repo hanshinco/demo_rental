@@ -63,13 +63,14 @@ const ICONS={
   cases:SVGIC('<path d="M12 3 21 8l-9 5-9-5 9-5Z"/><path d="M3.2 12.2 12 17l8.8-4.8"/>'),
   unitReg:SVGIC('<path d="M4 13V5a1 1 0 0 1 1-1h8l7 7-9 9-7-7a1 1 0 0 1 0-1Z"/><circle cx="8" cy="8" r="1.4"/>'),
   users:SVGIC('<circle cx="9" cy="8" r="3.2"/><path d="M3.6 19c0-3 2.4-5.2 5.4-5.2S14.4 16 14.4 19"/><path d="M15.6 5.6a3.1 3.1 0 0 1 0 5.6"/><path d="M17 13.9c1.9.6 3.3 2.3 3.3 4.6"/>'),
-  settings:SVGIC('<circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v2.3M12 19.1v2.3M21.4 12h-2.3M4.9 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4"/>')
+  settings:SVGIC('<circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v2.3M12 19.1v2.3M21.4 12h-2.3M4.9 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4"/>'),
+  holds:SVGIC('<circle cx="12" cy="12" r="8.5"/><path d="M10 9.5v5M14 9.5v5"/>')
 };
-const MENU=[{k:'dashboard',ic:ICONS.dashboard,t:'ダッシュボード'},{k:'search',ic:ICONS.search,t:'商品検索'},{k:'cases',ic:ICONS.cases,t:'案件一覧',sub:[{k:'shipwait',t:'出荷待ち一覧'},{k:'active',t:'貸出中一覧'},{k:'reserve',t:'予約一覧'},{k:'completed',t:'完了案件'}]},{k:'unitReg',ic:ICONS.unitReg,t:'商品登録',info:'サンプルを追加するときや新商品を登録するときに使用',need:'field'},{k:'users',ic:ICONS.users,t:'ユーザー登録',need:'office'},{k:'settings',ic:ICONS.settings,t:'設定・通知',need:'office'}];
+const MENU=[{k:'dashboard',ic:ICONS.dashboard,t:'ダッシュボード'},{k:'search',ic:ICONS.search,t:'商品検索'},{k:'cases',ic:ICONS.cases,t:'案件一覧',sub:[{k:'shipwait',t:'出荷待ち一覧'},{k:'active',t:'貸出中一覧'},{k:'reserve',t:'予約一覧'},{k:'completed',t:'完了案件'}]},{k:'holds',ic:ICONS.holds,t:'保留中一覧'},{k:'unitReg',ic:ICONS.unitReg,t:'商品登録',info:'サンプルを追加するときや新商品を登録するときに使用',need:'field'},{k:'users',ic:ICONS.users,t:'ユーザー登録',need:'office'},{k:'settings',ic:ICONS.settings,t:'設定・通知',need:'office'}];
 const CASEKEYS=['shipwait','active','reserve','completed'];   // 「案件一覧」配下のサブ画面
 let section='dashboard',selected='',view='gantt',zoomPx=26,listFilter='active',casesOpen=false;const expanded=new Set();
 /* ===== ルーティング（History API パス型 /… 。戻る/進む/ブックマーク/共有・リロードOK） ===== */
-const SECTIONS=['dashboard','search','shipwait','active','reserve','completed','unitReg','users','settings'];
+const SECTIONS=['dashboard','search','shipwait','active','holds','reserve','completed','unitReg','users','settings'];
 const BASE=window.__BASE||'/';   // GitHub Pagesのサブパス(/demo_rental/)かローカル(/)を吸収
 let _route={section:null,selected:null,listFilter:null},_detail=null;
 function pathSeg(){   // 現在の状態→URLのパス（BASE配下・クエリなし）
@@ -102,7 +103,7 @@ function go(s){
   if(s==='active'){navigate(BASE+'active');return;}
   navigate(BASE+(s==='dashboard'?'':s));}
 function goList(f){navigate(BASE+(f==='active'?'active':'active/'+encodeURIComponent(f)));}
-function render(){renderLeft();({dashboard:renderDashboard,search:renderProduct,shipwait:renderShipWait,active:renderActive,reserve:renderReserve,completed:renderCompleted,unitReg:renderUnitReg,users:renderUsers,settings:renderSettings}[section])();}
+function render(){renderLeft();({dashboard:renderDashboard,search:renderProduct,shipwait:renderShipWait,active:renderActive,holds:renderHolds,reserve:renderReserve,completed:renderCompleted,unitReg:renderUnitReg,users:renderUsers,settings:renderSettings}[section])();}
 /* パネル（レコード詳細）もURL化：戻るで閉じる・URL共有で直接開ける */
 function syncDetail(d,force){
   if(!d){if(_detail){_detail=null;hidePanel();}return;}
@@ -259,6 +260,17 @@ function renderActive(){const f=listFilter,hold=(f==='保留'||f==='検品待ち
     <div class="toolbar"><span class="meta">経過日数の長い順。行クリックで詳細。</span></div>
     <table class="list"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;bindTips();}
 
+/* 保留中一覧（検品待ち・付属品待ちの個体）。右端に「貸出可にする」「詳細」。倉庫でも操作可。 */
+function renderHolds(){const arr=units.map(u=>({u,s:statusOf(u)})).filter(o=>isHoldS(o.s.key))
+    .sort((a,b)=>{const ea=(a.u.loan&&a.u.loan.shipped)?days(a.u.loan.ship,TODAY):-1,eb=(b.u.loan&&b.u.loan.shipped)?days(b.u.loan.ship,TODAY):-1;return eb-ea;});
+  const rows=arr.map(({u,s})=>{const l=u.loan,p=prodOf(u.prod);
+    const el=(l&&l.shipped)?days(l.ship,TODAY):'';const elTxt=el===''?'－':`<span class="elapsed tnum ${el>90?'long':''}">${el}日</span>`;
+    const avail=canField()?`<button class="btn primary" onclick="makeAvail('${u.id}')">貸出可にする</button> `:'';
+    return `<tr><td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td><td><span class="st"><span class="dot ${s.dot}"></span>${s.key}</span></td><td>${l?esc(recip(l)):'－'}</td><td>${(l&&l.shipped)?fmtY(l.ship):'－'}</td><td>${elTxt}</td><td style="text-align:right;white-space:nowrap">${avail}<button class="btn" onclick="openPanel('${u.id}')">詳細</button></td></tr>`;
+  }).join('')||`<tr><td colspan="7" class="note" style="padding:14px">保留中の個体はありません 🎉</td></tr>`;
+  document.getElementById('main').innerHTML=`<div class="sechead"><h2>保留中一覧</h2><span class="meta">${arr.length}件　検品待ち・付属品待ちの個体。倉庫で検品後「貸出可にする」で貸出可能へ。</span></div>
+    <table class="list"><thead><tr><th>商品</th><th>シリアル</th><th>状態</th><th>貸出先</th><th>出荷日</th><th>経過</th><th style="text-align:right">操作</th></tr></thead><tbody>${rows}</tbody></table>`;bindTips();}
+
 function renderReserve(){document.getElementById('main').innerHTML=`<div class="sechead"><h2>予約</h2><span class="meta">シリアル単位の将来予約 ${reservations.length}件</span></div>
   <div class="toolbar"><span class="meta">キャンセルの場合は該当商品をクリックしてください。</span><span class="spacer"></span>${canOffice()?`<button class="btn primary" onclick="openResv('')">🗓 新規予約</button>`:''}</div>
   <table class="list"><thead><tr><th>商品 / シリアル</th><th>予約先 / 用途</th><th>出荷予定日</th><th>返却着荷予定日</th><th>受付</th><th></th></tr></thead><tbody>${resvGroups().map(g=>{const lines=g.items.map(it=>{const u=units.find(x=>x.id===it.unit)||{sn:it.unit,prod:''};return esc(prodOf(u.prod).name)+' #'+esc(u.sn)+' '+typeText(u);}).join('<br>');return `<tr><td>${lines}${g.items.length>1?` <span class="badge tnum">${g.items.length}台</span>`:''}</td><td><span class="pill resv">🗓</span> ${esc(g.customer)}</td><td>${fmt(g.start)}</td><td>${fmt(g.end)}</td><td>${esc(g.staff)}</td><td>${canOffice()?`<button class="btn" onclick="doCancelResv('${g.items[0].id}','${g.caseId}')">キャンセル</button>`:''}</td></tr>`;}).join('')||'<tr><td colspan="6" class="note" style="padding:12px">予約なし</td></tr>'}</tbody></table>`;}
@@ -364,6 +376,8 @@ function closePanel(){hidePanel();_detail=null;if(location.search)history.replac
 function confirmReturn(){const v=document.getElementById('retSel').value;if(!v){alert('返却処理を選択してください');return;}const u=units.find(x=>x.id===curUnit);
   (busyOn(),google.script.run).withSuccessHandler(()=>{closePanel();reload();}).withFailureHandler(e=>{busyOff();alert(e.message)}).returnLoan(u.loan.loanId,v,fmtISO(TODAY));}
 function doResolve(uid,proc){(busyOn(),google.script.run).withSuccessHandler(()=>{closePanel();reload();}).withFailureHandler(e=>{busyOff();alert(e.message)}).resolveHold(uid,proc);}
+// 保留中一覧の「貸出可にする」（倉庫でも操作可＝canField）。サーバ側 resolveHold も 事務所/倉庫 を許可。
+function makeAvail(uid){const u=units.find(x=>x.id===uid);if(!u)return;if(!confirm('#'+u.sn+' を貸出可にします。よろしいですか？'))return;doResolve(uid,'貸出可能');}
 function openDiscard(uid){const u=units.find(x=>x.id===uid),p=prodOf(u.prod);closePanel();
   document.getElementById('discardCard').innerHTML=`<h3>廃棄（マスタから非表示）</h3><div class="msub">#${u.sn} ${typeText(u)}　${esc(p.name)}</div>
    <p style="font-size:13px;line-height:1.7">このシリアルを廃棄します。マスタ一覧から<b>非表示（アーカイブ）</b>になります。履歴は残ります。</p>
