@@ -80,7 +80,7 @@ function pathSeg(){   // 現在の状態→URLのパス（BASE配下・クエリ
   else seg=(section==='dashboard')?'':section;
   return BASE+seg;}
 function parseRoute(){let path=location.pathname;if(path.indexOf(BASE)===0)path=path.slice(BASE.length);
-  const segs=path.split('/').filter(Boolean),sec=SECTIONS.indexOf(segs[0])>=0?segs[0]:'dashboard';
+  const segs=path.split('/').filter(Boolean),sec=!segs[0]?'dashboard':(SECTIONS.indexOf(segs[0])>=0?segs[0]:'notfound');   // 未知パスは notfound（404表示）
   const r={section:sec,selected:'',listFilter:'active',detail:null};
   if(sec==='search'&&segs[1])r.selected=decodeURIComponent(segs[1]);
   if(sec==='active'&&segs[1])r.listFilter=decodeURIComponent(segs[1]);
@@ -103,7 +103,9 @@ function go(s){
   if(s==='active'){navigate(BASE+'active');return;}
   navigate(BASE+(s==='dashboard'?'':s));}
 function goList(f){navigate(BASE+(f==='active'?'active':'active/'+encodeURIComponent(f)));}
-function render(){renderLeft();({dashboard:renderDashboard,search:renderProduct,shipwait:renderShipWait,active:renderActive,holds:renderHolds,reserve:renderReserve,completed:renderCompleted,unitReg:renderUnitReg,users:renderUsers,settings:renderSettings}[section])();}
+function render(){renderLeft();({dashboard:renderDashboard,search:renderProduct,shipwait:renderShipWait,active:renderActive,holds:renderHolds,reserve:renderReserve,completed:renderCompleted,unitReg:renderUnitReg,users:renderUsers,settings:renderSettings,notfound:renderNotFound}[section])();}
+// 存在しないURL（例 /yyyyy）。GitHub Pagesは404.htmlを返し、SPAはこの画面を表示（URLは保持）。ナビは出るので戻れる。
+function renderNotFound(){document.getElementById('main').innerHTML=`<div class="empty"><div><div class="big">🔍</div><div style="font-weight:700;font-size:16px;color:var(--ink)">ページが見つかりません</div><div class="note" style="margin-top:6px">お探しのURLは存在しないか、変更された可能性があります。</div><div style="margin-top:16px"><button class="btn primary" onclick="go('dashboard')">ダッシュボードへ戻る</button></div></div></div>`;}
 /* パネル（レコード詳細）もURL化：戻るで閉じる・URL共有で直接開ける */
 function syncDetail(d,force){
   if(!d){if(_detail){_detail=null;hidePanel();}return;}
