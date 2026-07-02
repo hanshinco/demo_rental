@@ -18,6 +18,10 @@
   .mi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;color:#3b4150;font-weight:600}
   .mi:hover{background:#f5f6f8}.mi.active{background:var(--accent-bg);color:var(--accent-strong)}.mi .ic{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px}
   .mi .ic svg{width:18px;height:18px;display:block}
+  .sev{width:13px;height:13px;vertical-align:-2px;display:inline-block}
+  .gi{width:15px;height:15px;vertical-align:-3px;display:inline-block}
+  .empty .gbig{width:44px;height:44px;color:var(--gray);display:block;margin:0 auto 8px}
+  .who-h .gi{margin-right:3px}
   .mi .mcaret{margin-left:auto;font-size:10px;color:var(--gray)}
   .submenu{overflow:hidden;animation:subin .18s ease}
   @keyframes subin{from{max-height:0;opacity:0}to{max-height:170px;opacity:1}}

@@ -45,7 +45,7 @@
 <div class="modal" id="discardModal"><div class="mcard" id="discardCard" style="width:480px"></div></div>
 <div class="modal" id="extModal"><div class="mcard" id="extCard" style="width:480px"></div></div>
 <div class="modal" id="caseModal"><div class="mcard" id="caseCard"></div></div>
-<div class="modal" id="empyoModal"><div class="mwrap" style="width:720px"><div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0">伝票プレビュー</h3><div><button class="btn" onclick="cls('empyoModal')">閉じる</button> <button class="btn primary" onclick="printEmpyo()">🖨 印刷 / PDF</button></div></div><div class="noprint" style="margin-bottom:10px"><input id="empyoExtra" placeholder="帳票に追記（例：マウント・カタログ同梱）" oninput="empyoExtra=this.value;renderEmpyo()" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit"></div><div id="empyoArea"></div></div></div>
+<div class="modal" id="empyoModal"><div class="mwrap" style="width:720px"><div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0">伝票プレビュー</h3><div><button class="btn" onclick="cls('empyoModal')">閉じる</button> <button class="btn primary" onclick="printEmpyo()">印刷 / PDF</button></div></div><div class="noprint" style="margin-bottom:10px"><input id="empyoExtra" placeholder="帳票に追記（例：マウント・カタログ同梱）" oninput="empyoExtra=this.value;renderEmpyo()" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit"></div><div id="empyoArea"></div></div></div>
 <div id="printRoot"></div>
 
 <script src="config.js"></script>
