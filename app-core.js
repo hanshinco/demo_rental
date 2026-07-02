@@ -55,7 +55,17 @@ function alertsIn(list){let over=0,soon=0,longg=0;list.forEach(u=>{const s=statu
 function chips(a){let h='';if(a.over)h+=`<span class="chip red">🟥 超過 ${a.over}</span>`;if(a.soon)h+=`<span class="chip amber">🟨 返却間近 ${a.soon}</span>`;if(a.longg)h+=`<span class="chip warn">⚠ 長期確認 ${a.longg}</span>`;return h||'<span class="note">アラートなし</span>';}
 
 /* ===== ナビ ===== */
-const MENU=[{k:'dashboard',ic:'🏠',t:'ダッシュボード'},{k:'search',ic:'🔍',t:'商品検索'},{k:'cases',ic:'📑',t:'案件一覧',sub:[{k:'shipwait',t:'出荷待ち一覧'},{k:'active',t:'貸出中一覧'},{k:'reserve',t:'予約一覧'},{k:'completed',t:'完了案件'}]},{k:'unitReg',ic:'🏷',t:'商品登録',info:'サンプルを追加するときや新商品を登録するときに使用',need:'field'},{k:'users',ic:'👥',t:'ユーザー登録',need:'office'},{k:'settings',ic:'⚙',t:'設定・通知',need:'office'}];
+// ナビのアイコンはインラインSVG（stroke=currentColorで文字色＝選択状態の色を自動継承）
+const SVGIC=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICONS={
+  dashboard:SVGIC('<path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/>'),
+  search:SVGIC('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/>'),
+  cases:SVGIC('<path d="M12 3 21 8l-9 5-9-5 9-5Z"/><path d="M3.2 12.2 12 17l8.8-4.8"/>'),
+  unitReg:SVGIC('<path d="M4 13V5a1 1 0 0 1 1-1h8l7 7-9 9-7-7a1 1 0 0 1 0-1Z"/><circle cx="8" cy="8" r="1.4"/>'),
+  users:SVGIC('<circle cx="9" cy="8" r="3.2"/><path d="M3.6 19c0-3 2.4-5.2 5.4-5.2S14.4 16 14.4 19"/><path d="M15.6 5.6a3.1 3.1 0 0 1 0 5.6"/><path d="M17 13.9c1.9.6 3.3 2.3 3.3 4.6"/>'),
+  settings:SVGIC('<circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v2.3M12 19.1v2.3M21.4 12h-2.3M4.9 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4"/>')
+};
+const MENU=[{k:'dashboard',ic:ICONS.dashboard,t:'ダッシュボード'},{k:'search',ic:ICONS.search,t:'商品検索'},{k:'cases',ic:ICONS.cases,t:'案件一覧',sub:[{k:'shipwait',t:'出荷待ち一覧'},{k:'active',t:'貸出中一覧'},{k:'reserve',t:'予約一覧'},{k:'completed',t:'完了案件'}]},{k:'unitReg',ic:ICONS.unitReg,t:'商品登録',info:'サンプルを追加するときや新商品を登録するときに使用',need:'field'},{k:'users',ic:ICONS.users,t:'ユーザー登録',need:'office'},{k:'settings',ic:ICONS.settings,t:'設定・通知',need:'office'}];
 const CASEKEYS=['shipwait','active','reserve','completed'];   // 「案件一覧」配下のサブ画面
 let section='dashboard',selected='',view='gantt',zoomPx=26,listFilter='active',casesOpen=false;const expanded=new Set();
 /* ===== ルーティング（History API パス型 /… 。戻る/進む/ブックマーク/共有・リロードOK） ===== */

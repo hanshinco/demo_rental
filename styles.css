@@ -9,13 +9,15 @@
   header.top{display:flex;align-items:center;gap:14px;background:var(--panel);border-bottom:1px solid var(--line);padding:11px 18px}
   .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}
   .brand .mk{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);font-size:13px}
+  .brand .mk svg{width:15px;height:15px;display:block}
   .spacer{flex:1}.who-h{font-size:12px;color:var(--muted)}.who-h b{color:var(--ink)}
   header.top button.primary{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:0;border-radius:var(--r2);padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit}
   .layout{display:flex;height:calc(100vh - 51px)}
   .left{width:264px;min-width:264px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
   .menu{padding:10px 8px}
   .mi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;color:#3b4150;font-weight:600}
-  .mi:hover{background:#f5f6f8}.mi.active{background:var(--accent-bg);color:var(--accent-strong)}.mi .ic{width:18px;text-align:center}
+  .mi:hover{background:#f5f6f8}.mi.active{background:var(--accent-bg);color:var(--accent-strong)}.mi .ic{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px}
+  .mi .ic svg{width:18px;height:18px;display:block}
   .mi .mcaret{margin-left:auto;font-size:10px;color:var(--gray)}
   .submenu{overflow:hidden;animation:subin .18s ease}
   @keyframes subin{from{max-height:0;opacity:0}to{max-height:170px;opacity:1}}
