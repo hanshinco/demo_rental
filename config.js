@@ -6,7 +6,7 @@
  */
 window.APP_CONFIG = {
   // Google Cloud Console で発行した OAuth クライアントID
-  CLIENT_ID: 'ここにOAuthクライアントIDを貼る.apps.googleusercontent.com',
+  CLIENT_ID: '1061860031109-005vd0tcpi6l515d0c97npmg29saju86.apps.googleusercontent.com',
   // GAS ウェブアプリのデプロイURL（末尾が /exec のもの）
   GAS_URL: 'ここにGASのexec URLを貼る',
   // 許可する組織ドメイン（クライアント側の事前チェック用。本当の検証はGAS側）
