@@ -1,0 +1,32 @@
+# === 秘密情報・ローカル設定（絶対にコミットしない）===
+# 本物の秘密（APIキー / WebフックURL / クライアントシークレット等）はここに置くか、
+# GASの「スクリプト プロパティ」にサーバ側保管する。リポジトリには入れない。
+.env
+.env.*
+*.local
+config.local.js
+secrets.*
+credentials*.json
+client_secret*.json
+*service-account*.json
+*.pem
+*.key
+
+# === スプレッドシートDBのエクスポート/バックアップ（実データは公開しない）===
+*.csv
+*.xlsx
+*.xls
+/data/
+/backup/
+/export/
+
+# === OS / エディタ ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# === clasp（将来GASをCLIデプロイする場合）===
+# .clasp.json はスクリプトIDを含むので公開したくなければ無視する
+.clasp.json
+.clasprc.json
