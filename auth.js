@@ -82,16 +82,17 @@ function scheduleRefresh(exp) {
 
 var TOKEN_KEY = 'demo_idToken';
 
-// F5リロード時の即復帰。同一タブに保存した“未失効”トークンで起動し、ログイン画面を出さない。
-// sessionStorage はタブを閉じると消える＝短命トークンを長期保存しない（復帰はF5の範囲のみ）。
+// リロード/別タブ/再起動での即復帰。保存した“未失効”トークンで起動し、ログイン画面を出さない。
+// localStorage はオリジン共有なので別タブでも再ログイン不要。トークンは約1時間で失効し、
+// 失効品は下の判定で復帰させず消去するため、有効なのは常に短命トークンのみ。
 // GISの自動サインイン(FedCM)は環境依存で失敗しやすいため、こちらを一次手段にする。
 function resumeFromStorage() {
   try {
-    var t = sessionStorage.getItem(TOKEN_KEY);
+    var t = localStorage.getItem(TOKEN_KEY);
     if (!t) return false;
     var c = decodeJwt(t);
-    if (c.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) { sessionStorage.removeItem(TOKEN_KEY); return false; }
-    if (!c.exp || c.exp * 1000 <= Date.now() + 30000) { sessionStorage.removeItem(TOKEN_KEY); return false; }  // 失効(30s余裕)
+    if (c.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) { localStorage.removeItem(TOKEN_KEY); return false; }
+    if (!c.exp || c.exp * 1000 <= Date.now() + 30000) { localStorage.removeItem(TOKEN_KEY); return false; }  // 失効(30s余裕)
     idToken = t;
     booted = true;
     installGasShim();
@@ -108,13 +109,13 @@ function onCredential(resp) {
   idToken = resp.credential;
   var claims = decodeJwt(idToken);
   if (claims.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) {
-    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
     var msg = document.getElementById('login-msg');
     msg.textContent = '⛔ 許可された組織のGoogleアカウントでログインしてください（あなた: ' + (claims.hd || claims.email) + '）';
     msg.className = 'login-msg ng';
     return;
   }
-  try { sessionStorage.setItem(TOKEN_KEY, idToken); } catch (e) {}   // F5復帰用に保持
+  try { localStorage.setItem(TOKEN_KEY, idToken); } catch (e) {}   // リロード/別タブ復帰用に保持
   scheduleRefresh(claims.exp);
   if (booted) return;   // 2回目以降（自動更新）はトークンを差し替えるだけ。UI再描画・データ再取得はしない
   booted = true;
