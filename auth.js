@@ -80,17 +80,42 @@ function scheduleRefresh(exp) {
   }, ms);
 }
 
+var TOKEN_KEY = 'demo_idToken';
+
+// F5リロード時の即復帰。同一タブに保存した“未失効”トークンで起動し、ログイン画面を出さない。
+// sessionStorage はタブを閉じると消える＝短命トークンを長期保存しない（復帰はF5の範囲のみ）。
+// GISの自動サインイン(FedCM)は環境依存で失敗しやすいため、こちらを一次手段にする。
+function resumeFromStorage() {
+  try {
+    var t = sessionStorage.getItem(TOKEN_KEY);
+    if (!t) return false;
+    var c = decodeJwt(t);
+    if (c.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) { sessionStorage.removeItem(TOKEN_KEY); return false; }
+    if (!c.exp || c.exp * 1000 <= Date.now() + 30000) { sessionStorage.removeItem(TOKEN_KEY); return false; }  // 失効(30s余裕)
+    idToken = t;
+    booted = true;
+    installGasShim();
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('loading').style.display = '';
+    scheduleRefresh(c.exp);
+    boot();   // app-core.js
+    return true;
+  } catch (e) { return false; }
+}
+
 // ログイン成功時（初回ログイン／自動サインイン／期限前の自動更新で共通に発火）
 function onCredential(resp) {
   idToken = resp.credential;
   var claims = decodeJwt(idToken);
   if (claims.hd !== window.APP_CONFIG.ALLOWED_DOMAIN) {
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
     var msg = document.getElementById('login-msg');
     msg.textContent = '⛔ ' + window.APP_CONFIG.ALLOWED_DOMAIN +
       ' のアカウントでログインしてください（あなた: ' + (claims.hd || claims.email) + '）';
     msg.className = 'login-msg ng';
     return;
   }
+  try { sessionStorage.setItem(TOKEN_KEY, idToken); } catch (e) {}   // F5復帰用に保持
   scheduleRefresh(claims.exp);
   if (booted) return;   // 2回目以降（自動更新）はトークンを差し替えるだけ。UI再描画・データ再取得はしない
   booted = true;
@@ -105,11 +130,11 @@ function initAuth() {
   google.accounts.id.initialize({
     client_id: window.APP_CONFIG.CLIENT_ID,
     callback: onCredential,
-    auto_select: true,             // リロード時に無操作で自動サインイン（同一セッションなら再ログイン不要）
-    use_fedcm_for_prompt: true      // Chromeのサードパーティ Cookie 廃止に追随（FedCMでOne Tapを表示）
+    auto_select: true               // One Tapでの自動サインインも試みる（環境が許せば）
   });
   google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'outline', size: 'large', width: 260 });
-  google.accounts.id.prompt();      // 自動選択可能なら即コールバック、無理なら手動ログインを促す
+  if (resumeFromStorage()) return;  // ★F5復帰: 保存トークンで即起動できたらログインは出さない
+  google.accounts.id.prompt();      // 初回/失効時のみ: One Tap or ボタンでログインを促す
 }
 
 function waitForGis(tries) {
