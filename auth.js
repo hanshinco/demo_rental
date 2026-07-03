@@ -1,15 +1,28 @@
 /*
- * 認証レイヤ + google.script.run シム
+ * 認証レイヤ + google.script.run シム  ── hanshinco 共通モジュール（他アプリへコピーして流用）
  *
  * 役割:
  *   1) Google Identity Services でログイン → IDトークン取得 → hd(組織ドメイン)を事前確認
  *   2) fetch ラッパー api() を提供（Content-Type: text/plain でCORSプリフライト回避）
- *   3) 現行 app-core.js が使う google.script.run を “シム” で再現し、無改変で動かす
+ *   3) app-core.js が使う google.script.run を “シム” で再現し、無改変で動かす
  *      （google.script.run.withSuccessHandler(f).withFailureHandler(g).METHOD(args...) を
  *       api('METHOD',[args...]).then(f).catch(g) に橋渡し）
  *   4) ログイン成功後に boot()（app-core.js内）を起動
  *
  * ★本当のドメイン制限はGAS側の verifyToken_（hd検証）が担保。ここのhdチェックは表示用。
+ *
+ * ── 共通の社員証（SSO）─────────────────────────────────────────────
+ *   IDトークンは TOKEN_KEY で localStorage に保持する。localStorage は「オリジン単位」で
+ *   共有されるため、hanshinco.github.io 配下の各アプリ（/demo_rental, /mizuta_stock…）が
+ *   同じキー・同じ CLIENT_ID を使えば「1回ログインで全アプリ入れる」＝実質SSOになる。
+ *   ★キー(TOKEN_KEY)は全アプリで共通固定にすること（アプリ別にすると共有が切れる）。
+ *
+ * ── 他アプリへ流用する時の“契約”（このファイルをコピーすれば動く前提）──────────
+ *   ・window.APP_CONFIG に CLIENT_ID / ALLOWED_DOMAIN / GAS_URL（config.js）
+ *     └ CLIENT_ID は共有アプリ間で同一に。GAS側 verifyToken_ の CLIENT_ID も同じ値に。
+ *   ・グローバル関数 boot()（データ取得〜初期描画の入口）
+ *   ・DOM: #login, #login-msg, #gbtn, #loading, #app
+ *   ・任意: window.busyOff（無ければ無視）
  */
 
 let idToken = null;
@@ -80,7 +93,7 @@ function scheduleRefresh(exp) {
   }, ms);
 }
 
-var TOKEN_KEY = 'demo_idToken';
+var TOKEN_KEY = 'hanshinco_idToken';   // ★オリジン共通キー（全アプリで同一固定＝1回ログインで全アプリ有効）
 
 // リロード/別タブ/再起動での即復帰。保存した“未失効”トークンで起動し、ログイン画面を出さない。
 // localStorage はオリジン共有なので別タブでも再ログイン不要。トークンは約1時間で失効し、
