@@ -177,14 +177,15 @@ function renderGantt(){const us=unitsOf(selected),total=days(WIN_START,WIN_END),
   document.getElementById('viewArea').innerHTML=`<div class="gantt"><div class="glabels">${labels}</div><div class="gscroll"><div class="gtimeline" style="width:${W}px"><div class="today" style="left:${todayX}px"><span class="todaylab">今日</span></div><div class="ghrow">${ticks}</div>${lines}</div></div></div>
     <div class="legend"><span><span class="sw" style="background:linear-gradient(180deg,#3b82f6,#2563eb)"></span>日付指定</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,#a6acbb,#a6acbb 4px,#bcc2cf 4px,#bcc2cf 8px)"></span>未定（→）</span><span><span class="sw" style="border:2px dashed var(--accent);background:#fff"></span>予約</span><span>${sev('超過')}超過 ${sev('間近')}返却間近 ${sev('長期')}長期確認</span></div>`;
   bindTips();}
-function renderListView(){let rows='';unitsOf(selected).forEach(u=>{const s=statusOf(u),l=u.loan,clk=(s.key==='貸出中'||isHoldS(s.key)||s.key==='出荷待ち');
+function renderListView(){const actCol=canField();let rows='';unitsOf(selected).forEach(u=>{const s=statusOf(u),l=u.loan,clk=(s.key==='貸出中'||isHoldS(s.key)||s.key==='出荷待ち');
     const tag=s.alert?' '+sev(s.alert):'';
     const cust=l?esc(recip(l)):'－';const ship=(l&&l.shipped)?fmtY(l.ship):'－';
     const due=(l&&!l.returned)?(l.dueType==='日付指定'?fmtY(l.due):l.dueType):'－';
     const el=(l&&l.shipped&&!l.returned)?days(l.ship,TODAY):'';const elTxt=el===''?'－':`<span class="elapsed tnum ${el>90?'long':''}">${el}日</span>`;
     const reqstaff=l?esc(l.reqStaff||'－'):'－';const rstaff=l?esc(l.staff||'－'):'－';const sstaff=l?esc(l.shipStaff||'－'):'－';
-    rows+=`<tr class="${clk?'click':''}${s.key==='貸出可'?' avail':''}" ${clk?`onclick="openPanel('${u.id}')"`:''}><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td><td><span class="st"><span class="dot ${s.dot}"></span>${s.key}${s.sub?'（'+s.sub+'）':''}${tag}</span></td><td>${cust}</td><td>${ship}</td><td>${due}</td><td>${elTxt}</td><td>${reqstaff}</td><td>${rstaff}</td><td>${sstaff}</td></tr>`;});
-  document.getElementById('viewArea').innerHTML=`<table class="list"><thead><tr><th>シリアル</th><th>状態</th><th>貸出先</th><th>出荷日</th><th>返却予定日</th><th>経過日数</th><th>依頼担当</th><th>受付担当</th><th>出荷担当</th></tr></thead><tbody>${rows}</tbody></table>`;bindTips();}
+    const actTd=actCol?`<td style="text-align:right;white-space:nowrap">${rowAct(u,s)}</td>`:'';
+    rows+=`<tr class="${clk?'click':''}${s.key==='貸出可'?' avail':''}" ${clk?`onclick="openPanel('${u.id}')"`:''}><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td><td><span class="st"><span class="dot ${s.dot}"></span>${s.key}${s.sub?'（'+s.sub+'）':''}${tag}</span></td><td>${cust}</td><td>${ship}</td><td>${due}</td><td>${elTxt}</td><td>${reqstaff}</td><td>${rstaff}</td><td>${sstaff}</td>${actTd}</tr>`;});
+  document.getElementById('viewArea').innerHTML=`<table class="list"><thead><tr><th>シリアル</th><th>状態</th><th>貸出先</th><th>出荷日</th><th>返却予定日</th><th>経過日数</th><th>依頼担当</th><th>受付担当</th><th>出荷担当</th>${actCol?'<th style="text-align:right">操作</th>':''}</tr></thead><tbody>${rows}</tbody></table>`;bindTips();}
 
 /* 出荷待ち案件（倉庫が「今日何を出すか」を見る）。案件IDでまとめ、単発は貸出ID単位 */
 function waitingCases(){const map={};
@@ -241,32 +242,35 @@ function renderDashboard(){let total=units.length,avail=0,out=0,ins=0,attw=0;uni
     <div class="kpis"><div class="kpi" style="cursor:pointer" onclick="goList('超過')"><div class="lab">${sev('超過')} 超過</div><div class="val tnum" style="color:var(--red)">${a.over}</div></div><div class="kpi" style="cursor:pointer" onclick="goList('間近')"><div class="lab">${sev('間近')} 返却間近(7日)</div><div class="val tnum" style="color:var(--amber)">${a.soon}</div></div><div class="kpi" style="cursor:pointer" onclick="goList('長期')"><div class="lab">${sev('長期')} 長期確認</div><div class="val tnum" style="color:#c2410c">${a.longg}</div></div></div>
     <div class="kpis"><div class="kpi"><div class="lab">総シリアル数</div><div class="val tnum">${total}</div></div><div class="kpi k-avail" style="cursor:pointer" onclick="goList('貸出可')"><div class="lab">貸出可</div><div class="val tnum">${avail}</div></div><div class="kpi k-out" style="cursor:pointer" onclick="goList('貸出中')"><div class="lab">貸出中</div><div class="val tnum">${out}</div></div><div class="kpi k-hold" style="cursor:pointer" onclick="goList('検品待ち')"><div class="lab">検品待ち</div><div class="val tnum">${ins}</div></div><div class="kpi k-hold" style="cursor:pointer" onclick="goList('付属品待ち')"><div class="lab">付属品待ち</div><div class="val tnum">${attw}</div></div><div class="kpi"><div class="lab">稼働率</div><div class="val tnum" style="color:var(--accent-strong)">${rate}%</div></div></div>
     <div style="margin-top:22px">${shipWaitSection(true)}</div>
-    <h4 style="margin:22px 0 8px">要対応（${att.length}件）</h4><table class="list"><thead><tr><th>商品</th><th>シリアル</th><th>状態</th><th>貸出先</th><th>終了予定</th><th>経過</th></tr></thead><tbody>${att.length?att.map(({u,s,el})=>{const l=u.loan,p=prodOf(u.prod),tag=sev(s.alert)+' '+s.alert,due=l.dueType==='日付指定'?fmtY(l.due):l.dueType;return `<tr class="click" onclick="openPanel('${u.id}')"><td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}</td><td>${tag}</td><td>${esc(recip(l))}</td><td>${due}</td><td><span class="elapsed tnum ${el>90?'long':''}">${el}日</span></td></tr>`;}).join(''):`<tr><td colspan="6" class="note" style="padding:14px">対応が必要な貸出はありません</td></tr>`}</tbody></table>
+    <h4 style="margin:22px 0 8px">要対応（${att.length}件）</h4><table class="list"><thead><tr><th>商品</th><th>シリアル</th><th>状態</th><th>貸出先</th><th>終了予定</th><th>経過</th></tr></thead><tbody>${att.length?att.slice(0,10).map(({u,s,el})=>{const l=u.loan,p=prodOf(u.prod),tag=sev(s.alert)+' '+s.alert,due=l.dueType==='日付指定'?fmtY(l.due):l.dueType;return `<tr class="click" onclick="openPanel('${u.id}')"><td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}</td><td>${tag}</td><td>${esc(recip(l))}</td><td>${due}</td><td><span class="elapsed tnum ${el>90?'long':''}">${el}日</span></td></tr>`;}).join(''):`<tr><td colspan="6" class="note" style="padding:14px">対応が必要な貸出はありません</td></tr>`}</tbody></table>${att.length>10?`<div style="margin-top:8px;text-align:right"><button class="btn" onclick="goList('要対応')">すべて見る（${att.length}件）</button></div>`:''}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px"><div><h4 style="margin:0 0 8px">メーカー別 稼働率</h4><div class="bars card">${Object.keys(makers).sort().map(m=>{const r=Math.round(makers[m].out/makers[m].t*100);return `<div class="brow"><div class="bn">${esc(m)}</div><div class="bt"><div class="bf" style="width:${r}%"></div></div><div class="bp tnum">${r}%</div></div>`;}).join('')||'<div class="note">データなし</div>'}</div></div>
       <div><h4 style="margin:0 0 8px">直近の予約</h4><table class="list"><thead><tr><th>シリアル</th><th>予約先</th><th>期間</th></tr></thead><tbody>${upc.map(r=>{const u=units.find(x=>x.id===r.unit)||{sn:r.unit};return `<tr><td>#${esc(u.sn)} ${typeText(u)}</td><td>${esc(r.customer)}</td><td>${fmt(r.start)}〜${fmt(r.end)}</td></tr>`;}).join('')||'<tr><td colspan="3" class="note" style="padding:12px">予約なし</td></tr>'}</tbody></table></div></div>
     <h4 style="margin:22px 0 8px">分析指標</h4><div class="repgrid" style="max-width:780px"><div class="repcard"><div class="lab">稼働率</div><div class="val tnum">${rate}%</div></div><div class="repcard"><div class="lab">予約件数</div><div class="val tnum">${reservations.length}件</div></div><div class="repcard"><div class="lab">総シリアル数</div><div class="val tnum">${total}</div></div><div class="repcard"><div class="lab">貸出可</div><div class="val tnum">${avail}</div></div></div>`;}
 
 function renderActive(){const f=listFilter,hold=(f==='保留'||f==='検品待ち'||f==='付属品待ち');
-  const titles={active:'貸出中リスト（全商品）','超過':'超過の貸出','間近':'返却間近の貸出','長期':'長期確認の貸出','貸出可':'貸出可のシリアル','貸出中':'貸出中のシリアル','保留':'検品/付属品待ちのシリアル','検品待ち':'検品待ちのシリアル','付属品待ち':'付属品待ちのシリアル','出荷待ち':'出荷待ちのシリアル'};
+  const titles={active:'貸出中リスト（全商品）','超過':'超過の貸出','間近':'返却間近の貸出','長期':'長期確認の貸出','要対応':'要対応の貸出（超過・間近・長期）','貸出可':'貸出可のシリアル','貸出中':'貸出中のシリアル','保留':'検品/付属品待ちのシリアル','検品待ち':'検品待ちのシリアル','付属品待ち':'付属品待ちのシリアル','出荷待ち':'出荷待ちのシリアル'};
   let arr=units.map(u=>({u,s:statusOf(u)}));
   if(f==='active')arr=arr.filter(o=>o.s.key==='貸出中'||isHoldS(o.s.key)||o.s.key==='出荷待ち');
   else if(f==='保留')arr=arr.filter(o=>isHoldS(o.s.key));
   else if(f==='貸出可'||f==='貸出中'||f==='出荷待ち'||f==='検品待ち'||f==='付属品待ち')arr=arr.filter(o=>o.s.key===f);
+  else if(f==='要対応')arr=arr.filter(o=>o.s.alert);
   else arr=arr.filter(o=>o.s.alert===f);
   const rows=arr.map(o=>{const u=o.u,l=u.loan,p=prodOf(u.prod),el=(l&&l.shipped)?days(l.ship,TODAY):'';return{u,l,p,s:o.s,el};}).sort((a,b)=>(b.el===''?-1:b.el)-(a.el===''?-1:a.el));
-  const head=hold
+  const actCol=canField();
+  const head=(hold
     ? `<th>商品</th><th>シリアル</th><th>状態</th><th>貸出先</th><th>出荷日</th><th>返却確認日</th><th>経過</th><th>依頼担当</th><th>受付担当</th><th>出荷担当</th><th>着荷確認担当</th>`
-    : `<th>商品</th><th>シリアル</th><th>状態</th><th>貸出先</th><th>出荷日</th><th>終了予定</th><th>経過</th><th>依頼担当</th><th>受付担当</th><th>出荷担当</th>`;
+    : `<th>商品</th><th>シリアル</th><th>状態</th><th>貸出先</th><th>出荷日</th><th>終了予定</th><th>経過</th><th>依頼担当</th><th>受付担当</th><th>出荷担当</th>`)+(actCol?'<th style="text-align:right">操作</th>':'');
   const body=rows.map(({u,l,p,s,el})=>{const tag=s.alert?' '+sev(s.alert):'';const clk=(s.key==='貸出中'||isHoldS(s.key)||s.key==='出荷待ち');
     const cust=l?esc(recip(l)):'－';const ship=(l&&l.shipped)?fmtY(l.ship):'－';const elTxt=el===''?'－':`<span class="elapsed tnum ${el>90?'long':''}">${el}日</span>`;
     const reqstaff=l?esc(l.reqStaff||'－'):'－';const rstaff=l?esc(l.staff||'－'):'－';const sstaff=l?esc(l.shipStaff||'－'):'－';
     const stCell=`<td><span class="st"><span class="dot ${s.dot}"></span>${s.key}${s.sub?'('+s.sub+')':''}${tag}</span></td>`;
+    const actTd=actCol?`<td style="text-align:right;white-space:nowrap">${rowAct(u,s)}</td>`:'';
     const tr=`<tr class="${clk?'click':''}" ${clk?`onclick="openPanel('${u.id}')"`:''}>`;
     if(hold){const rconf=l?fmtY(l.returned):'－';const cstaff=l?esc(l.recvStaff||'－'):'－';
-      return `${tr}<td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td>${stCell}<td>${cust}</td><td>${ship}</td><td>${rconf}</td><td>${elTxt}</td><td>${reqstaff}</td><td>${rstaff}</td><td>${sstaff}</td><td>${cstaff}</td></tr>`;}
+      return `${tr}<td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td>${stCell}<td>${cust}</td><td>${ship}</td><td>${rconf}</td><td>${elTxt}</td><td>${reqstaff}</td><td>${rstaff}</td><td>${sstaff}</td><td>${cstaff}</td>${actTd}</tr>`;}
     const due=(l&&!l.returned)?(l.dueType==='日付指定'?fmtY(l.due):l.dueType):'－';
-    return `${tr}<td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td>${stCell}<td>${cust}</td><td>${ship}</td><td>${due}</td><td>${elTxt}</td><td>${reqstaff}</td><td>${rstaff}</td><td>${sstaff}</td></tr>`;
-  }).join('')||`<tr><td colspan="${hold?11:10}" class="note" style="padding:14px">該当なし</td></tr>`;
+    return `${tr}<td>${esc(p.name)}</td><td>#${esc(u.sn)} ${typeText(u)}${noteI(u.note)}</td>${stCell}<td>${cust}</td><td>${ship}</td><td>${due}</td><td>${elTxt}</td><td>${reqstaff}</td><td>${rstaff}</td><td>${sstaff}</td>${actTd}</tr>`;
+  }).join('')||`<tr><td colspan="${(hold?11:10)+(actCol?1:0)}" class="note" style="padding:14px">該当なし</td></tr>`;
   document.getElementById('main').innerHTML=`<div class="sechead"><h2>${titles[f]||'一覧'}</h2><span class="meta">${rows.length}件</span>${f!=='active'?`<span class="pAlerts"><button class="btn" onclick="goList('active')">← 貸出中リストへ</button></span>`:''}</div>
     <div class="toolbar"><span class="meta">経過日数の長い順。行クリックで詳細。</span></div>
     <table class="list"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;bindTips();}
@@ -389,6 +393,22 @@ function confirmReturn(){const v=document.getElementById('retSel').value;if(!v){
 function doResolve(uid,proc){(busyOn(),google.script.run).withSuccessHandler(()=>{closePanel();reload();}).withFailureHandler(e=>{busyOff();alert(e.message)}).resolveHold(uid,proc);}
 // 保留中一覧の「貸出可にする」（倉庫でも操作可＝canField）。サーバ側 resolveHold も 事務所/倉庫 を許可。
 function makeAvail(uid){const u=units.find(x=>x.id===uid);if(!u)return;if(!confirm('#'+u.sn+' を貸出可にします。よろしいですか？'))return;doResolve(uid,'貸出可能');}
+/* 一覧行の右端アクション：貸出中→「返却…」（区分を選んで返却）、検品/付属品待ち→「貸出可にする」。事務所/倉庫のみ表示。 */
+function rowAct(u,s){if(!canField())return '';
+  if(s.key==='貸出中')return `<button class="btn" onclick="event.stopPropagation();openReturn('${u.id}')">返却…</button>`;
+  if(isHoldS(s.key))return `<button class="btn primary" onclick="event.stopPropagation();makeAvail('${u.id}')">貸出可にする</button>`;
+  return '';}
+/* 一覧から直接：返却処理（貸出中→貸出可/検品待ち/付属品待ち等）。パネルを開かずモーダルで確定。 */
+function openReturn(uid){if(!canField()){alert('返却処理は事務所・倉庫担当のみ可能です。');return;}
+  const u=units.find(x=>x.id===uid);if(!u||!u.loan)return;const l=u.loan,isTemp=u.origin==='在庫から（一時）';
+  const opts=isTemp?[{v:'在庫へ戻す',l:'在庫に戻す'},{v:'サンプル化',l:'サンプルに落とす'},{v:'検品待ち',l:'検品待ち'},{v:'付属品待ち',l:'付属品待ち'}]:[{v:'貸出可能',l:'貸出可能（検品完了）'},{v:'検品待ち',l:'検品待ち'},{v:'付属品待ち',l:'付属品待ち'}];
+  document.getElementById('retCard').innerHTML=`<h3>返却処理</h3><div class="msub">#${esc(u.sn)} ${typeText(u)}　${esc(prodOf(u.prod).name)}</div>
+   <div class="msub" style="margin-top:2px">貸出先：${esc(recip(l))}</div>
+   <div class="formgrid" style="margin-top:12px"><div class="full"><label>返却後のステータス</label><select id="retSel2"><option value="">選択してください…</option>${opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}</select></div></div>
+   <div class="mbtns"><button onclick="cls('retModal')">キャンセル</button><button class="primary" onclick="submitReturn('${l.loanId}')">返却を確定</button></div>`;
+  document.getElementById('retModal').classList.add('show');}
+function submitReturn(loanId){const v=val('retSel2');if(!v){alert('返却後のステータスを選択してください');return;}
+  (busyOn(),google.script.run).withSuccessHandler(()=>{cls('retModal');reload();}).withFailureHandler(e=>{busyOff();alert(e.message)}).returnLoan(loanId,v,fmtISO(TODAY));}
 function openDiscard(uid){const u=units.find(x=>x.id===uid),p=prodOf(u.prod);closePanel();
   document.getElementById('discardCard').innerHTML=`<h3>廃棄（マスタから非表示）</h3><div class="msub">#${u.sn} ${typeText(u)}　${esc(p.name)}</div>
    <p style="font-size:13px;line-height:1.7">このシリアルを廃棄します。マスタ一覧から<b>非表示（アーカイブ）</b>になります。履歴は残ります。</p>
